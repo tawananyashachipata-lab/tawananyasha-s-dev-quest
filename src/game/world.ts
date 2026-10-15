@@ -2,8 +2,8 @@ import type { LocationId } from "@/data/portfolio";
 
 // Logical tile size in world pixels.
 export const TILE = 32;
-export const WORLD_W = 44;
-export const WORLD_H = 30;
+export const WORLD_W = 48;
+export const WORLD_H = 32;
 
 export type TileKind =
   | "grass"
@@ -28,14 +28,15 @@ export type Building = {
 };
 
 export const buildings: Building[] = [
-  { id: "about", name: "About Me", tx: 4, ty: 4, doorX: 6, color: "#22d3ee", roof: "#7c3aed", icon: "?" },
-  { id: "skills", name: "Skills Dojo", tx: 32, ty: 4, doorX: 34, color: "#a78bfa", roof: "#0ea5e9", icon: "S" },
-  { id: "projects", name: "Project Village", tx: 5, ty: 20, doorX: 7, color: "#38bdf8", roof: "#6d28d9", icon: "P" },
-  { id: "certificates", name: "Hall of Certificates", tx: 33, ty: 20, doorX: 35, color: "#facc15", roof: "#8b5cf6", icon: "C" },
-  { id: "contact", name: "Contact Portal", tx: 19, ty: 6, doorX: 21, color: "#34d399", roof: "#0e7490", icon: "@" },
+  { id: "profile", name: "My Profile", tx: 4, ty: 4, doorX: 6, color: "#00E5FF", roof: "#7C3AED", icon: "ID" },
+  { id: "skills", name: "My Skills", tx: 39, ty: 4, doorX: 41, color: "#A78BFA", roof: "#0EA5E9", icon: "SK" },
+  { id: "tech", name: "Tech Stack", tx: 21, ty: 3, doorX: 23, color: "#38BDF8", roof: "#6D28D9", icon: "TS" },
+  { id: "projects", name: "My Projects", tx: 4, ty: 22, doorX: 6, color: "#22D3EE", roof: "#7C3AED", icon: "PR" },
+  { id: "certificates", name: "Certificates", tx: 39, ty: 22, doorX: 41, color: "#FACC15", roof: "#8B5CF6", icon: "CE" },
+  { id: "contact", name: "Let's Connect", tx: 21, ty: 24, doorX: 23, color: "#39FF14", roof: "#0E7490", icon: "@" },
 ];
 
-export const spawnPoint = { x: 22 * TILE + TILE / 2, y: 16 * TILE };
+export const spawnPoint = { x: 24 * TILE, y: 15 * TILE };
 
 const grid: TileKind[][] = [];
 
@@ -70,7 +71,7 @@ function vPath(y0: number, y1: number, x: number) {
 function scatter(kind: TileKind, count: number, seed: number) {
   let placed = 0;
   let n = seed;
-  while (placed < count && n < seed + 4000) {
+  while (placed < count && n < seed + 6000) {
     const x = (n * 37) % WORLD_W;
     const y = (n * 91) % WORLD_H;
     if (grid[y] && grid[y][x] === "grass") {
@@ -84,35 +85,44 @@ function scatter(kind: TileKind, count: number, seed: number) {
 function buildWorld() {
   baseGrid();
 
-  // Water pond bottom-center
-  for (let y = 24; y < 29; y++) {
-    for (let x = 17; x < 26; x++) {
-      const dx = x - 21.5;
-      const dy = y - 26.5;
-      if (dx * dx / 22 + dy * dy / 7 < 1) grid[y][x] = "water";
+  // Central plaza
+  for (let y = 13; y <= 17; y++) {
+    for (let x = 20; x <= 27; x++) grid[y][x] = "path";
+  }
+
+  // Paths from plaza to each zone door
+  hPath(6, 41, 12);
+  vPath(7, 12, 23);
+  vPath(8, 12, 6);
+  vPath(8, 12, 41);
+  vPath(12, 27, 6);
+  vPath(12, 27, 41);
+  hPath(6, 41, 20);
+  vPath(17, 27, 23);
+
+  // Water ponds in the mid-band corners
+  for (let y = 14; y < 19; y++) {
+    for (let x = 11; x < 17; x++) {
+      const dx = x - 14;
+      const dy = y - 16.5;
+      if (dx * dx / 8 + dy * dy / 5 < 1) grid[y][x] = "water";
+    }
+  }
+  for (let y = 14; y < 19; y++) {
+    for (let x = 31; x < 37; x++) {
+      const dx = x - 34;
+      const dy = y - 16.5;
+      if (dx * dx / 8 + dy * dy / 5 < 1) grid[y][x] = "water";
     }
   }
 
-  // Paths from spawn hub to each building door
-  hPath(6, 36, 12);
-  vPath(8, 16, 22);
-  hPath(8, 36, 16);
-  vPath(12, 23, 7);
-  vPath(12, 23, 35);
-  hPath(7, 35, 23);
-  vPath(8, 12, 7);
-  vPath(8, 12, 35);
-  // contact portal path
-  vPath(10, 12, 21);
-
-  // Building footprints + walls
+  // Building footprints
   for (const b of buildings) {
     for (let y = b.ty; y < b.ty + 3; y++) {
       for (let x = b.tx; x < b.tx + 4; x++) {
         if (y >= 0 && y < WORLD_H && x >= 0 && x < WORLD_W) grid[y][x] = "wall";
       }
     }
-    // clear a doorstep tile in front of the door
     const dy = b.ty + 3;
     if (dy < WORLD_H) grid[dy][b.doorX] = "path";
   }
@@ -127,9 +137,9 @@ function buildWorld() {
     grid[y][WORLD_W - 1] = "tree";
   }
 
-  scatter("tree", 26, 3);
-  scatter("flower", 40, 11);
-  scatter("rock", 14, 23);
+  scatter("tree", 24, 3);
+  scatter("flower", 44, 11);
+  scatter("rock", 12, 23);
 }
 
 buildWorld();
@@ -150,15 +160,11 @@ export function allTiles(): TileKind[][] {
 
 // Nearest building within interaction range of a world position, if any.
 export function nearbyBuilding(px: number, py: number): Building | null {
-  const tx = px / TILE;
-  const ty = py / TILE;
   for (const b of buildings) {
     const doorWorldX = (b.doorX + 0.5) * TILE;
     const doorWorldY = (b.ty + 3) * TILE;
     const dist = Math.hypot(px - doorWorldX, py - doorWorldY);
-    if (dist < TILE * 1.6) return b;
-    // also allow standing on the doorstep tile
-    if (Math.abs(tx - (b.doorX + 0.5)) < 0.8 && Math.abs(ty - (b.ty + 3)) < 0.9) return b;
+    if (dist < TILE * 1.7) return b;
   }
   return null;
 }

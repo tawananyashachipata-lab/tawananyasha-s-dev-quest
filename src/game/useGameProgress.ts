@@ -13,11 +13,12 @@ type Save = {
   xp: number;
   visited: LocationId[];
   unlocked: string[];
-  muted: boolean;
+  soundOn: boolean;
 };
 
 function loadSave(): Save {
-  const fallback: Save = { xp: 0, visited: [], unlocked: [], muted: false };
+  // Sound is OFF by default; the visitor opts in via the HUD toggle.
+  const fallback: Save = { xp: 0, visited: [], unlocked: [], soundOn: false };
   if (typeof window === "undefined") return fallback;
   try {
     const raw = window.localStorage.getItem(SAVE_KEY);
@@ -27,7 +28,7 @@ function loadSave(): Save {
       xp: typeof parsed.xp === "number" ? parsed.xp : 0,
       visited: Array.isArray(parsed.visited) ? (parsed.visited as LocationId[]) : [],
       unlocked: Array.isArray(parsed.unlocked) ? parsed.unlocked : [],
-      muted: parsed.muted === true,
+      soundOn: parsed.soundOn === true,
     };
   } catch {
     return fallback;
@@ -41,7 +42,7 @@ export function useGameProgress() {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   useEffect(() => {
-    sounds.muted = save.muted;
+    sounds.muted = !save.soundOn;
     try {
       window.localStorage.setItem(SAVE_KEY, JSON.stringify(save));
     } catch {
@@ -75,22 +76,21 @@ export function useGameProgress() {
     (loc: LocationId) => {
       setSave((s) => {
         if (s.visited.includes(loc)) return s;
-        const visited = [...s.visited, loc];
-        return { ...s, xp: s.xp + VISIT_XP, visited };
+        return { ...s, xp: s.xp + VISIT_XP, visited: [...s.visited, loc] };
       });
-      const locAch: Partial<Record<LocationId, string>> = {
-        about: "lore-master",
+      const locAch: Record<LocationId, string> = {
+        profile: "profile-viewer",
         skills: "skill-seeker",
+        tech: "gear-check",
         projects: "project-inspector",
         certificates: "certified",
         contact: "networker",
       };
       unlock("curious");
-      const specific = locAch[loc];
-      if (specific) unlock(specific);
-      // explorer check runs against the post-visit set
+      unlock(locAch[loc]);
+      // Explorer check runs against the post-visit set.
       setSave((s) => {
-        if (s.visited.length >= 5 && !s.unlocked.includes("explorer")) {
+        if (s.visited.length >= 6 && !s.unlocked.includes("explorer")) {
           const ach = achievements.find((a) => a.id === "explorer");
           if (ach) {
             sounds.play("levelup");
@@ -107,9 +107,14 @@ export function useGameProgress() {
   const markMoved = useCallback(() => unlock("first-steps"), [unlock]);
   const markResume = useCallback(() => unlock("resume-hunter"), [unlock]);
 
-  const toggleMute = useCallback(() => {
-    setSave((s) => ({ ...s, muted: !s.muted }));
+  const toggleSound = useCallback(() => {
+    setSave((s) => ({ ...s, soundOn: !s.soundOn }));
   }, []);
+
+  const resetProgress = useCallback(() => {
+    setSave((s) => ({ xp: 0, visited: [], unlocked: [], soundOn: s.soundOn }));
+    pushToast("Exploration reset", "XP, visited zones and achievements cleared.");
+  }, [pushToast]);
 
   const level = Math.floor(save.xp / LEVEL_XP) + 1;
   const levelProgress = ((save.xp % LEVEL_XP) / LEVEL_XP) * 100;
@@ -121,14 +126,26 @@ export function useGameProgress() {
       levelProgress,
       visited: save.visited,
       unlocked: save.unlocked,
-      muted: save.muted,
+      soundOn: save.soundOn,
       toasts,
       visit,
       unlock,
       markMoved,
       markResume,
-      toggleMute,
+      toggleSound,
+      resetProgress,
     }),
-    [save, level, levelProgress, toasts, visit, unlock, markMoved, markResume, toggleMute],
+    [
+      save,
+      level,
+      levelProgress,
+      toasts,
+      visit,
+      unlock,
+      markMoved,
+      markResume,
+      toggleSound,
+      resetProgress,
+    ],
   );
 }
