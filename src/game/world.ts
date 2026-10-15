@@ -40,6 +40,11 @@ export const spawnPoint = { x: 24 * TILE, y: 15 * TILE };
 
 const grid: TileKind[][] = [];
 
+function setTile(x: number, y: number, k: TileKind) {
+  const row = grid[y];
+  if (row && x >= 0 && x < WORLD_W) row[x] = k;
+}
+
 function baseGrid() {
   for (let y = 0; y < WORLD_H; y++) {
     const row: TileKind[] = [];
@@ -52,7 +57,7 @@ function baseGrid() {
 
 function carvePath(points: [number, number][]) {
   for (const [x, y] of points) {
-    if (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) grid[y][x] = "path";
+    if (x >= 0 && x < WORLD_W && y >= 0 && y < WORLD_H) setTile(x, y, "path");
   }
 }
 
@@ -74,7 +79,7 @@ function scatter(kind: TileKind, count: number, seed: number) {
   while (placed < count && n < seed + 6000) {
     const x = (n * 37) % WORLD_W;
     const y = (n * 91) % WORLD_H;
-    if (grid[y] && grid[y][x] === "grass") {
+    if (grid[y]?.[x] === "grass") {
       grid[y][x] = kind;
       placed++;
     }
@@ -87,7 +92,7 @@ function buildWorld() {
 
   // Central plaza
   for (let y = 13; y <= 17; y++) {
-    for (let x = 20; x <= 27; x++) grid[y][x] = "path";
+    for (let x = 20; x <= 27; x++) setTile(x, y, "path");
   }
 
   // Paths from plaza to each zone door
@@ -105,14 +110,14 @@ function buildWorld() {
     for (let x = 11; x < 17; x++) {
       const dx = x - 14;
       const dy = y - 16.5;
-      if (dx * dx / 8 + dy * dy / 5 < 1) grid[y][x] = "water";
+      if (dx * dx / 8 + dy * dy / 5 < 1) setTile(x, y, "water");
     }
   }
   for (let y = 14; y < 19; y++) {
     for (let x = 31; x < 37; x++) {
       const dx = x - 34;
       const dy = y - 16.5;
-      if (dx * dx / 8 + dy * dy / 5 < 1) grid[y][x] = "water";
+      if (dx * dx / 8 + dy * dy / 5 < 1) setTile(x, y, "water");
     }
   }
 
@@ -120,21 +125,21 @@ function buildWorld() {
   for (const b of buildings) {
     for (let y = b.ty; y < b.ty + 3; y++) {
       for (let x = b.tx; x < b.tx + 4; x++) {
-        if (y >= 0 && y < WORLD_H && x >= 0 && x < WORLD_W) grid[y][x] = "wall";
+        if (y >= 0 && y < WORLD_H && x >= 0 && x < WORLD_W) setTile(x, y, "wall");
       }
     }
     const dy = b.ty + 3;
-    if (dy < WORLD_H) grid[dy][b.doorX] = "path";
+    setTile(b.doorX, dy, "path");
   }
 
   // Border trees
   for (let x = 0; x < WORLD_W; x++) {
-    grid[0][x] = "tree";
-    grid[WORLD_H - 1][x] = "tree";
+    setTile(x, 0, "tree");
+    setTile(x, WORLD_H - 1, "tree");
   }
   for (let y = 0; y < WORLD_H; y++) {
-    grid[y][0] = "tree";
-    grid[y][WORLD_W - 1] = "tree";
+    setTile(0, y, "tree");
+    setTile(WORLD_W - 1, y, "tree");
   }
 
   scatter("tree", 24, 3);
@@ -146,7 +151,7 @@ buildWorld();
 
 export function tileAt(tx: number, ty: number): TileKind {
   if (tx < 0 || ty < 0 || tx >= WORLD_W || ty >= WORLD_H) return "tree";
-  return grid[ty][tx];
+  return grid[ty]?.[tx] ?? "tree";
 }
 
 export function isSolid(tx: number, ty: number): boolean {
