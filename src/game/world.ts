@@ -80,7 +80,7 @@ function scatter(kind: TileKind, count: number, seed: number) {
     const x = (n * 37) % WORLD_W;
     const y = (n * 91) % WORLD_H;
     if (grid[y]?.[x] === "grass") {
-      grid[y][x] = kind;
+      setTile(x, y, kind);
       placed++;
     }
     n++;
