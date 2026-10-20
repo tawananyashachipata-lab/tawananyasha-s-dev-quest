@@ -95,7 +95,7 @@ Thank you for exploring Tawana's Dev Quest!
 Feel free to explore my work, share feedback, and connect with me.
 
 - **GitHub:** [@tawananyashachipata-lab](https://github.com/tawananyashachipata-lab)
-- **Portfolio:** [Add your deployed portfolio link here]
+- **Portfolio:** https://tawanaportfolio.vercel.app/
 
 ---
 
